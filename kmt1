@@ -1,0 +1,46 @@
+# http://swcarpentry.github.io/web-data-python/02-csv/
+import requests
+import csv
+import sqlite3
+
+conn = sqlite3.connect("mydb.sqlite")
+cur = conn.cursor()
+cur.execute("drop table if exists LMPD_HateCrimes_Stage;")
+cur.execute("""
+create table if not exists LMPD_HateCrimes_Stage(
+     ID varchar(10)
+    ,INCIDENT_NUMBER varchar(10)
+    ,DATE_REPORTED varchar(30)
+    ,DATE_OCCURED varchar(30)
+    ,CRIME_TYPE varchar(100)
+    ,BIAS_MOTIVATION_GROUP varchar(100)
+    ,BAIS_TARGETED_AGAINST varchar(100)
+    ,UOR_DESC varchar(1000)
+    ,NIBRS_CODE varchar(10)
+    ,UCR_HIERARCHY varchar(100)
+    ,ATT_COMP varchar(100)
+    ,LMPD_DIVISION varchar(100)
+    ,LMPD_BEAT varchar(100)
+    ,PREMISE_TYPE varchar(100)
+    ,BLOCK_ADDRESS varchar(1000)
+    ,City varchar(100)
+    ,ZIP_CODE varchar(100)
+);
+""")
+
+#this should be replaced by api call since the file name changes daily
+url = 'https://data.louisvilleky.gov/sites/default/files/LMPD_OP_BIAS_8.csv'
+response = requests.get(url)
+if response.status_code != 200:
+    print('Failed to get data:', response.status_code)
+else:
+    wrapper = csv.reader(response.text.strip().split('\n'))
+    #this allows me to skip the first line in file, which are column headers
+    headerline = True
+    for record in wrapper:
+        if headerline:
+            headerline = False
+        else:
+            cur.execute("INSERT INTO LMPD_HateCrimes_Stage(ID, INCIDENT_NUMBER,DATE_REPORTED,DATE_OCCURED,CRIME_TYPE,BIAS_MOTIVATION_GROUP,BAIS_TARGETED_AGAINST,UOR_DESC,NIBRS_CODE,UCR_HIERARCHY,ATT_COMP,LMPD_DIVISION,LMPD_BEAT,PREMISE_TYPE,BLOCK_ADDRESS,City,ZIP_CODE) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (record))
+
+cur.execute("select * from LMPD_HateCrimes_Stage;").fetchmany(3)
